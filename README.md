@@ -10,7 +10,7 @@ The whole `Scripts` tree is intentionally one Git repository. Arduino and Pi cha
 
 ## Current milestone
 
-The Arduino program implements a non-blocking state machine, one-stick differential drive, three normally-open momentary bumper alerts, and a 17-pixel status layout. The default motor adapter targets the DFRobot DFR0508 FireBeetle DC Motor & Stepper Driver and its `DFRobot_MotorStepper` library.
+The Arduino program implements a non-blocking state machine, one-stick differential drive, three normally-open momentary bumper alerts, and a 17-pixel status layout. The motor adapter targets the DFRobot DRI0023 Dual Bipolar Stepper Motor Shield (DRV8825) and uses AccelStepper to service both STEP/DIR channels without blocking the safety loop.
 
 The Pi program is a runnable, hardware-independent supervisor scaffold. Its serial and Linux joystick adapters are deliberately small so actual hardware details can be added without rewriting the state machine.
 
@@ -55,4 +55,3 @@ git push -u origin main
 ```
 
 The included GitHub Actions workflow builds the Arduino firmware and checks/tests the Pi package.
-

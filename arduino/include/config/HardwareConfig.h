@@ -22,7 +22,8 @@ constexpr uint8_t kBumperRightPin = 18;
 constexpr uint16_t kButtonDebounceMs = 8;
 constexpr uint16_t kObstacleMinimumHoldMs = 750;
 
-constexpr uint8_t kLedPin = 6;
+// D9 is free on the DRI0023. D4-D8 and D12 are reserved by the shield.
+constexpr uint8_t kLedPin = 9;
 constexpr uint8_t kLedCount = 17;
 constexpr uint8_t kLedBrightness = 48;  // Current-limited until power design is confirmed.
 constexpr uint8_t kLeftLedFirst = 0;
@@ -34,11 +35,15 @@ constexpr uint8_t kRightLedCount = 5;
 
 constexpr int16_t kDriveScale = 1000;
 constexpr int16_t kDriveMotionThreshold = 80;
-constexpr uint16_t kStepperMinimumRunSpeed = 8;
-constexpr uint16_t kStepperMaximumRunSpeed = 350;  // Conservative first-test value; DFR0508 API max is 1023.
+constexpr uint8_t kLeftStepPin = 6;
+constexpr uint8_t kLeftDirectionPin = 7;
+constexpr uint8_t kLeftEnablePin = 8;
+constexpr uint8_t kRightStepPin = 5;
+constexpr uint8_t kRightDirectionPin = 4;
+constexpr uint8_t kRightEnablePin = 12;
+constexpr float kStepperMaximumStepsPerSecond = 800.0F;
+constexpr uint16_t kDrv8825MinimumPulseWidthUs = 3;
 constexpr bool kInvertLeftMotor = false;
 constexpr bool kInvertRightMotor = true;
-constexpr uint16_t kDriveCommandRefreshMs = 250;
 
 }  // namespace config
-

@@ -8,11 +8,11 @@ Research performed 2026-07-19. Links point to primary project or vendor document
 
 | Option | Strengths | Constraints | Decision |
 | --- | --- | --- | --- |
-| [DFRobot_MotorStepper](https://github.com/DFRobot/DFRobot_MotorStepper) | Official API for the DFR0508; I2C coprocessor can drive two four-wire steppers continuously and keeps step generation off the main MCU | Product-specific, old API, and not interchangeable with other DFRobot boards | Selected behind `DriveController`; confirm the exact DFRobot SKU |
-| [AccelStepper](https://www.airspayce.com/mikem/arduino/AccelStepper/) | Mature, portable, acceleration/position support, callback interface | `run()` must be serviced frequently; direct pulse generation is not useful when DFR0508 owns stepping | Preferred fallback for a future STEP/DIR driver |
-| [FastAccelStepper](https://github.com/gin66/FastAccelStepper) | Hardware-assisted queued stepping and high rates on supported MCUs | More platform-specific and unnecessary for an I2C motor coprocessor | Reconsider only if the motor hardware changes to STEP/DIR |
+| [DFRobot DRI0023](https://wiki.dfrobot.com/dri0023/) | Confirmed shield; two DRV8825 STEP/DIR channels, per-channel active-low enable, DIP-selected microstepping | Fixed pins D4-D8/D12; current limit and microstep switches must be set physically | Selected hardware behind `DriveController` |
+| [AccelStepper](https://www.airspayce.com/mikem/arduino/AccelStepper/) | Mature, non-blocking `runSpeed()`, independent simultaneous motors, direct STEP/DIR driver mode | Must be serviced every loop; keep Mega rates conservative and avoid blocking work | Selected for continuous joystick speed control on fixed STEP pins D5 and D6 |
+| [FastAccelStepper](https://github.com/gin66/FastAccelStepper) | Timer-driven queued stepping and high rates on the Mega 2560 | Mega step outputs must share a supported timer pin group; the DRI0023's fixed D5/D6 pair is not in one group | Not selected for this shield |
 
-The application depends only on `DriveController`. Replacing the DFRobot board means replacing one adapter, not the state machine.
+The application depends only on `DriveController`. Replacing the shield means replacing one adapter, not the state machine. `service()` is called on every loop so step generation remains independent of state decisions.
 
 ### Joystick
 
@@ -20,7 +20,7 @@ The initial joystick is read using Arduino `analogRead()` and a digital push swi
 
 ### Bumper buttons
 
-[Bounce2](https://github.com/thomasfredericks/Bounce2) is selected for mechanical-switch debounce. Each normally-open bumper also uses Arduino `attachInterrupt()` through `digitalPinToInterrupt()`. The interrupt routines only set a volatile bit; I2C, LED updates, debounce, logging, and state transitions stay in the normal loop. This keeps the ISR safe and gives fast obstacle latching.
+[Bounce2](https://github.com/thomasfredericks/Bounce2) is selected for mechanical-switch debounce. Each normally-open bumper also uses Arduino `attachInterrupt()` through `digitalPinToInterrupt()`. The interrupt routines only set a volatile bit; stepper changes, LED updates, debounce, logging, and state transitions stay in the normal loop. This keeps the ISR safe and gives fast obstacle latching.
 
 ### Addressable LEDs
 
@@ -44,4 +44,3 @@ For the current milestone, real-time drive safety remains on the Arduino. The Pi
 3. Pins, inversions, thresholds, and timeouts live in configuration.
 4. Every loop path is non-blocking; no `delay()` is used in Arduino runtime code.
 5. Safety events are latched and require a deliberate neutral/release condition before drive resumes.
-

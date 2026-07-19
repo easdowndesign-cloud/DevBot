@@ -2,13 +2,13 @@
 
 #include "config/HardwareConfig.h"
 #include "core/Types.h"
-#include "drive/DFRobotStepperDrive.h"
+#include "drive/DRI0023Drive.h"
 #include "input/BumperInput.h"
 #include "input/JoystickInput.h"
 #include "output/LedController.h"
 
 namespace {
-DFRobotStepperDrive drive;
+DRI0023Drive drive;
 JoystickInput joystick;
 BumperInput bumpers;
 LedController leds;
@@ -49,6 +49,8 @@ void setup() {
 }
 
 void loop() {
+  // AccelStepper is cooperative: service both STEP channels on every pass.
+  drive.service();
   bumpers.update();
   const JoystickSnapshot joystickInput = joystick.read();
   const DriveCommand requestedCommand = joystick.mix(joystickInput);
@@ -120,4 +122,3 @@ void loop() {
 
   leds.showState(state, appliedCommand);
 }
-
