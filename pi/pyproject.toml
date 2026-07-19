@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "devbot-pi"
+version = "0.1.0"
+description = "Raspberry Pi supervisor for DevBot"
+requires-python = ">=3.10"
+dependencies = ["pyserial>=3.5", "tomli>=2.0; python_version < '3.11'"]
+
+[project.optional-dependencies]
+hardware = ["evdev>=1.9; platform_system == 'Linux'", "gpiozero>=2.0; platform_system == 'Linux'"]
+dev = ["pytest>=8", "pytest-asyncio>=0.23", "ruff>=0.5"]
+
+[project.scripts]
+devbot-pi = "devbot_pi.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"

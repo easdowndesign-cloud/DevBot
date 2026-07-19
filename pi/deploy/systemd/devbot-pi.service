@@ -1,0 +1,15 @@
+[Unit]
+Description=DevBot Raspberry Pi Supervisor
+After=dev-ttyACM0.device
+
+[Service]
+Type=simple
+User=devbot
+WorkingDirectory=/opt/devbot/pi
+ExecStart=/opt/devbot/pi/.venv/bin/devbot-pi --config /etc/devbot/devbot.toml
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
+

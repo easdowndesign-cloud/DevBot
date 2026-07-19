@@ -1,0 +1,15 @@
+[application]
+tick_hz = 20
+heartbeat_timeout_s = 1.0
+
+[serial]
+port = "/dev/serial/by-id/REPLACE_WITH_ARDUINO_ID"
+baudrate = 115200
+
+[joystick]
+device_name_contains = "REPLACE_WITH_JOYSTICK_NAME"
+deadzone = 0.12
+x_axis_code = 0
+y_axis_code = 1
+enable_button_code = 304
+
