@@ -7,9 +7,9 @@ namespace config {
 constexpr unsigned long kSerialBaud = 115200;
 
 // Arduino Mega defaults. Confirm against the hardware checklist before use.
-constexpr uint8_t kJoystickXPin = A8;
-constexpr uint8_t kJoystickYPin = A9;
-constexpr uint8_t kJoystickButtonPin = 22;
+constexpr uint8_t kJoystickXPin = A4;
+constexpr uint8_t kJoystickYPin = A5;
+constexpr uint8_t kJoystickButtonPin = 0;
 constexpr int16_t kJoystickCentreX = 512;
 constexpr int16_t kJoystickCentreY = 512;
 constexpr int16_t kJoystickDeadband = 70;
@@ -18,7 +18,7 @@ constexpr bool kInvertJoystickY = true;
 
 constexpr uint8_t kBumperLeftPin = 2;
 constexpr uint8_t kBumperCentrePin = 3;
-constexpr uint8_t kBumperRightPin = 18;
+constexpr uint8_t kBumperRightPin = 1;
 constexpr uint16_t kButtonDebounceMs = 8;
 constexpr uint16_t kObstacleMinimumHoldMs = 750;
 
