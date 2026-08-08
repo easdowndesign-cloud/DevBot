@@ -2,10 +2,12 @@
 
 #include "../config/HardwareConfig.h"
 
+// NEO_GRB + NEO_KHZ800 matches the installed WS2812-compatible LED chain.
 LedController::LedController()
     : pixels_(config::kLedCount, config::kLedPin, NEO_GRB + NEO_KHZ800) {}
 
 void LedController::begin() {
+  // Clear and transmit once so pixels cannot retain random power-up colours.
   pixels_.begin();
   pixels_.setBrightness(config::kLedBrightness);
   pixels_.clear();
@@ -13,11 +15,13 @@ void LedController::begin() {
 }
 
 void LedController::showStartupSequence() {
+  // Half the strip length is the number of mirrored steps needed to meet centre.
   const uint8_t frames = (config::kLedCount + 1) / 2;
 
   // Twin cyan comets with violet and blue tails converge on the centre.
   for (uint8_t step = 0; step < frames; ++step) {
     pixels_.clear();
+    // Head positions advance inward from the two physical ends.
     const uint8_t left = step;
     const uint8_t right = config::kLedCount - 1 - step;
     pixels_.setPixelColor(left, pixelColour(StatusColour::Cyan));
@@ -36,6 +40,7 @@ void LedController::showStartupSequence() {
 
   // A green ready wave expands from the centre, then gives one cyan heartbeat.
   pixels_.clear();
+  // These are the two centre pixels for an even-length strip.
   const uint8_t leftCentre = (config::kLedCount - 1) / 2;
   const uint8_t rightCentre = config::kLedCount / 2;
   for (uint8_t step = 0; step < frames; ++step) {
@@ -53,6 +58,7 @@ void LedController::showStartupSequence() {
 }
 
 void LedController::showState(AppState state, const DriveCommand& command) {
+  // Resolve semantic colours before touching the physical strip.
   const StatusColour leftColour = motorStatusColour(command.left, state);
   const StatusColour middleColour = modeStatusColour(state);
   const StatusColour rightColour = motorStatusColour(command.right, state);
@@ -64,6 +70,7 @@ void LedController::showState(AppState state, const DriveCommand& command) {
   }
 
   pixels_.clear();
+  // Logical left/right indices already account for the rear-mounted viewpoint.
   fillRange(config::kLeftLedFirst, config::kLeftLedCount,
             pixelColour(leftColour));
   fillRange(config::kMiddleLedFirst, config::kMiddleLedCount,
@@ -78,10 +85,12 @@ void LedController::showState(AppState state, const DriveCommand& command) {
 }
 
 void LedController::fillRange(uint8_t first, uint8_t count, uint32_t colour) {
+  // Pixel groups are contiguous, so an exclusive upper bound keeps this generic.
   for (uint8_t index = first; index < first + count; ++index) pixels_.setPixelColor(index, colour);
 }
 
 LedController::StatusColour LedController::motorStatusColour(int16_t speed, AppState state) {
+  // Safety/application states take priority over the requested wheel direction.
   if (state == AppState::Fault) return StatusColour::Orange;
   if (state == AppState::ObstacleStop) return StatusColour::Magenta;
   if (state == AppState::Disabled || state == AppState::Boot) return StatusColour::Blue;
@@ -91,6 +100,7 @@ LedController::StatusColour LedController::motorStatusColour(int16_t speed, AppS
 }
 
 LedController::StatusColour LedController::modeStatusColour(AppState state) {
+  // The centre group gives one colour for the robot's high-level operating mode.
   switch (state) {
     case AppState::Boot: return StatusColour::Purple;
     case AppState::Disabled: return StatusColour::Blue;
@@ -106,6 +116,7 @@ LedController::StatusColour LedController::modeStatusColour(AppState state) {
 }
 
 const __FlashStringHelper* LedController::colourName(StatusColour colour) {
+  // F() stores fixed labels in flash instead of consuming scarce Mega SRAM.
   switch (colour) {
     case StatusColour::Off: return F("OFF");
     case StatusColour::Green: return F("GREEN");
@@ -121,6 +132,7 @@ const __FlashStringHelper* LedController::colourName(StatusColour colour) {
 }
 
 uint32_t LedController::pixelColour(StatusColour colour) {
+  // Packed values are written as 0xRRGGBB; the NeoPixel object applies GRB order.
   switch (colour) {
     case StatusColour::Off: return 0x000000;
     case StatusColour::Green: return 0x00C020;

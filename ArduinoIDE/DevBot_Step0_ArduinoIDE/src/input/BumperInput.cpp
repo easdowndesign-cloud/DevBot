@@ -5,9 +5,11 @@
 
 #include "../config/HardwareConfig.h"
 
+// Interrupt handlers OR bits into this shared byte until loop() consumes them.
 volatile uint8_t BumperInput::interruptMask_ = 0;
 
 bool BumperInput::begin() {
+  // INPUT_PULLUP makes an open bumper HIGH and a pressed bumper LOW.
   left_.attach(config::kBumperLeftPin, INPUT_PULLUP);
   centre_.attach(config::kBumperCentrePin, INPUT_PULLUP);
   right_.attach(config::kBumperRightPin, INPUT_PULLUP);
@@ -18,6 +20,7 @@ bool BumperInput::begin() {
   centre_.setPressedState(LOW);
   right_.setPressedState(LOW);
 
+  // Validate every interrupt mapping before attaching any handler.
   const int leftInterrupt = digitalPinToInterrupt(config::kBumperLeftPin);
   const int centreInterrupt = digitalPinToInterrupt(config::kBumperCentrePin);
   const int rightInterrupt = digitalPinToPinChangeInterrupt(config::kBumperRightPin);
@@ -35,12 +38,14 @@ bool BumperInput::begin() {
 }
 
 void BumperInput::update() {
+  // Bounce2 requires regular polling to advance each debounce state machine.
   left_.update();
   centre_.update();
   right_.update();
 }
 
 uint8_t BumperInput::consumeAlertMask() {
+  // Copy-and-clear atomically so an ISR cannot lose an event between operations.
   noInterrupts();
   const uint8_t result = interruptMask_;
   interruptMask_ = 0;
@@ -49,6 +54,7 @@ uint8_t BumperInput::consumeAlertMask() {
 }
 
 uint8_t BumperInput::pressedMask() const {
+  // Build a live mask from debounced states rather than raw interrupt events.
   uint8_t result = 0;
   if (left_.isPressed()) result |= Left;
   if (centre_.isPressed()) result |= Centre;
@@ -56,6 +62,7 @@ uint8_t BumperInput::pressedMask() const {
   return result;
 }
 
+// Keep ISRs minimal: no logging, LEDs, debounce work, or motor operations.
 void BumperInput::onLeftInterrupt() { interruptMask_ |= Left; }
 void BumperInput::onCentreInterrupt() { interruptMask_ |= Centre; }
 void BumperInput::onRightInterrupt() { interruptMask_ |= Right; }

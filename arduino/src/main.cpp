@@ -7,26 +7,32 @@
 #include "input/JoystickInput.h"
 #include "output/LedController.h"
 
+// Step 0 application coordinator. Hardware-specific work is delegated to the
+// input, drive, and LED adapters so this file can focus on safety and state flow.
 namespace {
-DRI0023Drive drive;
-JoystickInput joystick;
-BumperInput bumpers;
-LedController leds;
+DRI0023Drive drive;     // Converts logical wheel commands into shield pulses.
+JoystickInput joystick; // Provides normalized position and dead-man state.
+BumperInput bumpers;    // Latches obstacle events and debounces live switches.
+LedController leds;     // Displays startup, motor, and application status.
 
-AppState state = AppState::Boot;
-unsigned long stateEnteredMs = 0;
-unsigned long lastTelemetryMs = 0;
-unsigned long lastDriveControlUs = 0;
-DriveCommand appliedCommand{};
+AppState state = AppState::Boot;       // Current top-level application state.
+unsigned long stateEnteredMs = 0;      // Time the current state was entered.
+unsigned long lastTelemetryMs = 0;     // Rate-limit timestamp for serial output.
+unsigned long lastDriveControlUs = 0;  // Scheduler timestamp for 200 Hz control.
+DriveCommand appliedCommand{};         // Logical command currently sent to drive.
+
+// Minimum changes required to emit new analogue telemetry. This avoids serial
+// flooding from insignificant ADC noise while preserving useful bench feedback.
 constexpr int16_t kTelemetryAxisStep = 100;
 constexpr uint16_t kTelemetryActivationStep = 50;
-bool telemetryPrinted = false;
-AppState lastTelemetryState = AppState::Boot;
-JoystickSnapshot lastTelemetryInput{};
-uint8_t lastTelemetryBumperMask = 0xFF;
-int8_t lastTelemetryLeftDirection = 2;
-int8_t lastTelemetryRightDirection = 2;
+bool telemetryPrinted = false;  // Ensures the first valid sample is always sent.
+AppState lastTelemetryState = AppState::Boot;  // Last transmitted state.
+JoystickSnapshot lastTelemetryInput{};         // Last transmitted joystick data.
+uint8_t lastTelemetryBumperMask = 0xFF;         // Last transmitted live bumpers.
+int8_t lastTelemetryLeftDirection = 2;          // Cached -1/0/+1 left direction.
+int8_t lastTelemetryRightDirection = 2;         // Cached -1/0/+1 right direction.
 
+// Convert an application state into a stable, human-readable serial label.
 const __FlashStringHelper* stateName(AppState value) {
   switch (value) {
     case AppState::Boot: return F("BOOT");
@@ -42,22 +48,26 @@ const __FlashStringHelper* stateName(AppState value) {
   return F("UNKNOWN");
 }
 
+// Convert a logical wheel demand into its serial direction label.
 const __FlashStringHelper* directionName(int16_t command) {
   if (command > config::kDriveMotionThreshold) return F("FWD");
   if (command < -config::kDriveMotionThreshold) return F("REV");
   return F("STOP");
 }
 
+// Compact numeric equivalent of directionName(), used for change detection.
 int8_t directionCode(int16_t command) {
   if (command > config::kDriveMotionThreshold) return 1;
   if (command < -config::kDriveMotionThreshold) return -1;
   return 0;
 }
 
+// Emit one self-contained bench status line when a meaningful value changes.
 void printBenchTelemetry(const JoystickSnapshot& input, const DriveCommand& requested,
                          uint8_t bumperMask) {
   if (!config::kBenchTelemetryEnabled) return;
 
+  // Direction changes are more useful to trigger on than every speed increment.
   const int8_t leftDirection = directionCode(appliedCommand.left);
   const int8_t rightDirection = directionCode(appliedCommand.right);
   const bool statusChanged =
@@ -74,12 +84,16 @@ void printBenchTelemetry(const JoystickSnapshot& input, const DriveCommand& requ
                            abs(static_cast<int>(input.yActivationRaw) -
                                static_cast<int>(lastTelemetryInput.yActivationRaw)) >=
                                kTelemetryActivationStep;
+  // Enforce both event-change and minimum-interval requirements.
   if ((!statusChanged && !axesChanged) ||
       millis() - lastTelemetryMs < config::kBenchTelemetryIntervalMs) {
     return;
   }
   lastTelemetryMs = millis();
 
+  // Field order is intentionally stable for visual checks and future parsers:
+  // state, joystick, raw activation, filtered activation, request, output,
+  // direction, bumpers, and the expected left/middle/right LED colours.
   Serial.print(F("S="));
   Serial.print(stateName(state));
   Serial.print(F(" J="));
@@ -117,6 +131,7 @@ void printBenchTelemetry(const JoystickSnapshot& input, const DriveCommand& requ
   Serial.println(LedController::colourName(
       LedController::motorStatusColour(appliedCommand.right, state)));
 
+  // Cache exactly what was represented by this line for the next comparison.
   telemetryPrinted = true;
   lastTelemetryState = state;
   lastTelemetryInput = input;
@@ -125,6 +140,8 @@ void printBenchTelemetry(const JoystickSnapshot& input, const DriveCommand& requ
   lastTelemetryRightDirection = rightDirection;
 }
 
+// Change state once, record entry time, and optionally emit compact production
+// state telemetry when verbose bench telemetry has been disabled.
 void enterState(AppState next) {
   if (next == state) return;
   state = next;
@@ -137,7 +154,10 @@ void enterState(AppState next) {
   }
 }
 
+// Classify a logical wheel pair. Steering difference takes priority so both
+// stationary rotations and moving arcs report their left/right turn direction.
 AppState drivingStateFor(const DriveCommand& command) {
+  // Sum represents translation; difference represents yaw/steering.
   const int32_t average = static_cast<int32_t>(command.left) + command.right;
   const int32_t turn = static_cast<int32_t>(command.left) - command.right;
   if (turn > config::kDriveMotionThreshold * 2L) return AppState::TurningRight;
@@ -149,22 +169,28 @@ AppState drivingStateFor(const DriveCommand& command) {
 
 }  // namespace
 
+// Initialize every subsystem in safe order. The drive adapter disables both
+// channels before the success animation is allowed to run.
 void setup() {
   Serial.begin(config::kSerialBaud);
   joystick.begin();
   leds.begin();
   const bool bumpersReady = bumpers.begin();
   const bool driveReady = drive.begin();
+  // Any initialization failure permanently enters the safe fault state.
   if (!bumpersReady || !driveReady) {
     drive.stop();
     enterState(AppState::Fault);
     return;
   }
   leds.showStartupSequence();
+  // Normal operation always begins disabled, requiring joystick activation.
   enterState(AppState::Disabled);
   leds.showState(state, appliedCommand);
 }
 
+// Cooperative real-time loop: pulse generation runs continuously while slower
+// input, state, LED, and serial work executes at the configured control rate.
 void loop() {
   // AccelStepper is cooperative: service both STEP channels on every pass.
   drive.service();
@@ -176,6 +202,7 @@ void loop() {
   lastDriveControlUs = nowUs;
 
   bumpers.update();
+  // Capture all inputs before calculating a new command or state transition.
   const JoystickSnapshot joystickInput = joystick.read();
   drive.service();  // Reduce the step gap caused by four sequential ADC reads.
   const DriveCommand requestedCommand = joystick.mix(joystickInput);
@@ -196,11 +223,13 @@ void loop() {
   // Top-level, non-blocking application state machine.
   switch (state) {
     case AppState::Boot:
+      // setup() normally leaves Boot; retain a safe fallback if it does not.
       drive.stop();
       appliedCommand = {};
       break;
 
     case AppState::Disabled:
+      // Repeated stop() calls guarantee no output remains enabled at rest.
       drive.stop();
       appliedCommand = {};
       if (joystickActive) {
@@ -220,12 +249,15 @@ void loop() {
         enterState(AppState::Disabled);
         break;
       }
+      // Normal command changes use the drive adapter's acceleration ramp.
       appliedCommand = requestedCommand;
       drive.command(appliedCommand);
       enterState(drivingStateFor(appliedCommand));
       break;
 
     case AppState::ObstacleStop:
+      // The obstacle latch can clear only after time, bumpers, activation, and
+      // joystick position all independently confirm a safe reset condition.
       drive.stop();
       appliedCommand = {};
       if (millis() - stateEnteredMs >= config::kObstacleMinimumHoldMs && bumpers.allReleased() &&
@@ -238,11 +270,14 @@ void loop() {
       break;
 
     case AppState::Fault:
+      // Fault is intentionally terminal until the controller is reset.
       drive.stop();
       appliedCommand = {};
       break;
   }
 
+  // Both outputs are change-filtered: LEDs avoid redundant interrupt masking,
+  // and telemetry avoids flooding the serial buffer.
   leds.showState(state, appliedCommand);
   printBenchTelemetry(joystickInput, requestedCommand, bumpers.pressedMask());
 }
