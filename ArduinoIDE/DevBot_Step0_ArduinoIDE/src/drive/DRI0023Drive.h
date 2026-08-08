@@ -2,7 +2,7 @@
 
 #include <AccelStepper.h>
 
-#include "drive/DriveController.h"
+#include "DriveController.h"
 
 class DRI0023Drive final : public DriveController {
  public:

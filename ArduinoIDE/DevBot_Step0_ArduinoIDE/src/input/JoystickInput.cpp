@@ -1,6 +1,6 @@
-#include "input/JoystickInput.h"
+#include "JoystickInput.h"
 
-#include "config/HardwareConfig.h"
+#include "../config/HardwareConfig.h"
 
 void JoystickInput::begin() {
   pinMode(config::kJoystickXActivationPin, INPUT);

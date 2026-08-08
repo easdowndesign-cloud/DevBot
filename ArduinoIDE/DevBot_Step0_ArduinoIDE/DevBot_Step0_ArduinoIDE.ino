@@ -1,11 +1,11 @@
 #include <Arduino.h>
 
-#include "config/HardwareConfig.h"
-#include "core/Types.h"
-#include "drive/DRI0023Drive.h"
-#include "input/BumperInput.h"
-#include "input/JoystickInput.h"
-#include "output/LedController.h"
+#include "src/config/HardwareConfig.h"
+#include "src/core/Types.h"
+#include "src/drive/DRI0023Drive.h"
+#include "src/input/BumperInput.h"
+#include "src/input/JoystickInput.h"
+#include "src/output/LedController.h"
 
 namespace {
 DRI0023Drive drive;

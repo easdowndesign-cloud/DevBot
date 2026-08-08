@@ -1,6 +1,6 @@
-#include "drive/DRI0023Drive.h"
+#include "DRI0023Drive.h"
 
-#include "config/HardwareConfig.h"
+#include "../config/HardwareConfig.h"
 
 DRI0023Drive::DRI0023Drive()
     : left_(AccelStepper::DRIVER, config::kLeftStepPin, config::kLeftDirectionPin),

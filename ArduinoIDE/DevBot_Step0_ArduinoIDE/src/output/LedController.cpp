@@ -1,6 +1,6 @@
-#include "output/LedController.h"
+#include "LedController.h"
 
-#include "config/HardwareConfig.h"
+#include "../config/HardwareConfig.h"
 
 LedController::LedController()
     : pixels_(config::kLedCount, config::kLedPin, NEO_GRB + NEO_KHZ800) {}

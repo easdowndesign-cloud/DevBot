@@ -1,4 +1,5 @@
 .pio/
+.platformio-core/
 .venv/
 __pycache__/
 *.py[cod]
@@ -9,4 +10,3 @@ htmlcov/
 .env
 .DS_Store
 Thumbs.db
-
