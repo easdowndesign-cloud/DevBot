@@ -18,6 +18,8 @@ class DRI0023Drive final : public DriveController {
   void command(const DriveCommand& command) override;
   // Bypass the ramp for dead-man, bumper, fault, and disabled-state safety.
   void stop() override;
+  // Bit 0 reports the left channel and bit 1 the right channel as enabled.
+  uint8_t enabledMask() const;
 
  private:
   // Apply one logical demand to a motor's target and enable it when required.

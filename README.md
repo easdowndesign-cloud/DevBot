@@ -1,9 +1,10 @@
 # DevBot software
 
-This repository contains the two programs used by DevBot:
+This repository contains the programs used by DevBot:
 
 - `arduino/` contains the real-time motor, bumper, joystick, and status-light controller.
 - `pi/` contains the Raspberry Pi supervisor and the boundary for higher-level behaviours.
+- `pico_remote/` contains the Step 1 MicroPython handheld remote, PiicoDev radio/OLED drivers, desktop tests, protocol handoff, and first-upload guide.
 - `docs/` records library choices, hardware assumptions, and wiring/configuration decisions.
 
 The whole `Scripts` tree is intentionally one Git repository. Arduino and Pi changes can therefore be reviewed and versioned together without fragile nested repositories.

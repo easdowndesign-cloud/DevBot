@@ -1,8 +1,37 @@
 # Arduino controller
 
-The firmware is a PlatformIO Arduino project. `src/main.cpp` is the top-level state machine; vendor-specific or sizeable behavior lives under `src/` with public headers under `include/`.
+Open `arduino.ino` in Arduino IDE as the canonical top-level state machine.
+Vendor-specific or sizeable behavior remains separated under `src/`; Arduino
+IDE compiles those modules automatically with the sketch.
 
-## State flow
+## Current Pi 4 ↔ Mega integration build
+
+`arduino.ino` is the canonical Arduino IDE entry point. It initializes the
+DRI0023 STEP/DIR/ENABLE pins, NeoPixel output and all three bumper inputs exactly
+as the assembled robot will. The same sketch can therefore be tested with the
+hardware disconnected while observing the production pins with a meter or
+oscilloscope. Incoming commands are parsed, mixed at the full normalized range,
+applied to the real drive adapter and returned as telemetry.
+
+The application adds `AWAIT_NEUTRAL` and `COMMS_LOST` states, requires a
+disabled neutral command after connection loss, and enforces independent 200 ms
+USB and 300 ms remote-sample watchdogs.
+
+All USB records use 115200 baud, newline framing, and CRC-16/CCITT-FALSE:
+
+- Pi command: `C,version,frame_seq,remote_seq,remote_age_ms,enable,steering,throttle*CRC`
+- Mega hello: `H,version,DEVBOT_MEGA,DRIVE_HW*CRC`
+- Mega telemetry: `T,version,ack_seq,state_id,left,right,driver_enable_mask,bumper_mask,fault_mask*CRC`
+
+Protocol version 2 adds the live driver-enable mask. Bit 0 is the left DRI0023
+channel and bit 1 is the right channel; this reports the firmware's actual
+active-low enable-output state rather than inferring it from wheel commands.
+
+The current Pi bridge temporarily derives enable from non-neutral joystick
+movement. The remote's explicit dead-man/enable input must replace this behavior
+before motors are mechanically loaded or the robot is tested on the floor.
+
+## Physical robot state flow
 
 `BOOT -> DISABLED -> READY -> DRIVING_FORWARD/DRIVING_REVERSE/TURNING_LEFT/TURNING_RIGHT`
 
@@ -27,7 +56,7 @@ pulses. NeoPixel data is retransmitted only when a displayed status colour
 changes, preventing small joystick fluctuations from repeatedly interrupting
 step timing.
 
-## LED layout
+## LED layout (18 pixels)
 
 - 0-7: middle mode group
 - 8-12: right motor group

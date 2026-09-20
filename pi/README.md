@@ -9,3 +9,6 @@ The intended safety split is:
 - Arduino: bumpers, motor stop, joystick fallback, drive and LED real-time state.
 - Pi: high-level modes, telemetry, autonomy, UI/network integration, and command supervision.
 
+`transceiver_validation/` is a standalone motor-free commissioning endpoint.
+It only validates Pico radio frames and returns protocol acknowledgements; it
+does not open the Arduino link or control any output hardware.

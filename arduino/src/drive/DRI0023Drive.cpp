@@ -1,6 +1,6 @@
-#include "drive/DRI0023Drive.h"
+#include "DRI0023Drive.h"
 
-#include "config/HardwareConfig.h"
+#include "../config/HardwareConfig.h"
 
 // DRIVER mode tells AccelStepper that each instance controls an external
 // STEP/DIR driver rather than directly energizing motor windings.
@@ -76,6 +76,11 @@ void DRI0023Drive::stop() {
   if (rightEnabled_) right_.disableOutputs();
   leftEnabled_ = false;
   rightEnabled_ = false;
+}
+
+uint8_t DRI0023Drive::enabledMask() const {
+  return static_cast<uint8_t>((leftEnabled_ ? 0x01U : 0x00U) |
+                              (rightEnabled_ ? 0x02U : 0x00U));
 }
 
 void DRI0023Drive::setMotorTarget(AccelStepper& motor, int16_t requested, float& targetSpeed,

@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DevBot Receiver</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --background: #0b1220;
+      --panel: #172033;
+      --panel-alt: #101827;
+      --text: #e5edf8;
+      --muted: #8fa3bd;
+      --grid: #43526a;
+      --blue: #37a2ff;
+      --green: #39d98a;
+      --red: #ff5d73;
+      --amber: #ffbd4a;
+      --cyan: #35d0d0;
+      --purple: #a875ff;
+      --magenta: #ff58b0;
+      --orange: #ff8a3d;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      height: 100vh;
+      height: 100dvh;
+      min-height: 0;
+      overflow: hidden;
+      background: var(--background);
+      color: var(--text);
+      display: grid;
+      font-family: "DejaVu Sans", system-ui, sans-serif;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 18px 24px;
+    }
+
+    h1 {
+      flex: 1;
+      margin: 0;
+      font-size: clamp(1.4rem, 3vw, 2rem);
+      letter-spacing: .04em;
+    }
+
+    .badge {
+      border-radius: 4px;
+      padding: 8px 14px;
+      background: var(--panel);
+      color: var(--amber);
+      font-size: .78rem;
+      font-weight: 800;
+      text-align: center;
+    }
+
+    .badge.primary {
+      min-width: 100px;
+      background: var(--red);
+      color: white;
+      font-size: .9rem;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(320px, 3fr) minmax(430px, 4fr);
+      gap: 18px;
+      min-height: 0;
+      padding: 0 24px 18px;
+    }
+
+    .right-column {
+      display: grid;
+      grid-template-rows: auto auto minmax(0, 1fr);
+      gap: 14px;
+      min-height: 0;
+    }
+
+    .panel {
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      border: 1px solid #26344a;
+      background: var(--panel);
+    }
+
+    .panel-title {
+      padding: 13px 16px 7px;
+      color: var(--muted);
+      font-size: .78rem;
+      font-weight: 800;
+      letter-spacing: .04em;
+    }
+
+    .joystick-panel {
+      display: flex;
+      min-height: 0;
+      flex-direction: column;
+    }
+
+    .canvas-wrap {
+      display: flex;
+      flex: 1;
+      align-items: center;
+      justify-content: center;
+      margin: 8px 16px 12px;
+      min-height: 0;
+      background: var(--panel-alt);
+    }
+
+    canvas {
+      width: min(100%, 480px);
+      height: auto;
+      max-height: 100%;
+      aspect-ratio: 1;
+    }
+
+    .direction {
+      padding: 0 16px 18px;
+      color: var(--blue);
+      font-size: 1.7rem;
+      font-weight: 800;
+      text-align: center;
+    }
+
+    .value {
+      margin: 4px 16px 8px;
+      padding: 9px 12px;
+      overflow: hidden;
+      background: var(--panel-alt);
+      color: var(--blue);
+      font-family: "DejaVu Sans Mono", ui-monospace, monospace;
+      font-size: .9rem;
+      font-weight: 700;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .value:last-child { color: var(--amber); }
+
+    .indicators {
+      display: grid;
+      grid-template-columns: minmax(130px, auto) minmax(180px, 1fr);
+      gap: 7px 18px;
+      padding: 5px 16px 16px;
+    }
+
+    .indicator-name {
+      align-self: center;
+      color: var(--muted);
+      font-size: .82rem;
+    }
+
+    .indicator-value {
+      padding: 5px 8px;
+      overflow: hidden;
+      background: var(--panel-alt);
+      font-size: .8rem;
+      font-weight: 800;
+      text-align: right;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .serial-panel {
+      display: flex;
+      min-height: 0;
+      flex-direction: column;
+    }
+
+    pre {
+      flex: 1;
+      min-height: 0;
+      margin: 5px 16px 16px;
+      padding: 10px;
+      overflow: auto;
+      background: var(--panel-alt);
+      color: var(--text);
+      font-family: "DejaVu Sans Mono", ui-monospace, monospace;
+      font-size: .75rem;
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }
+
+    footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 0 24px 16px;
+      color: var(--muted);
+      font-size: .76rem;
+    }
+
+    @media (max-width: 850px) {
+      body {
+        display: block;
+        height: auto;
+        min-height: 100vh;
+        overflow: auto;
+      }
+      header { flex-wrap: wrap; }
+      h1 { flex-basis: 100%; }
+      main { grid-template-columns: 1fr; }
+      .joystick-panel { min-height: 480px; }
+      .right-column { grid-template-rows: auto auto 360px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>DEVBOT RECEIVER</h1>
+    <div id="server-badge" class="badge">WEB CONNECTED</div>
+    <div id="radio-badge" class="badge">RADIO STARTING</div>
+    <div id="link-badge" class="badge primary">UNLINKED</div>
+  </header>
+
+  <main>
+    <section class="panel joystick-panel">
+      <div class="panel-title">REMOTE JOYSTICK</div>
+      <div class="canvas-wrap">
+        <canvas id="joystick" width="480" height="480"></canvas>
+      </div>
+      <div id="direction" class="direction">CENTRE</div>
+    </section>
+
+    <section class="right-column">
+      <div class="panel">
+        <div class="panel-title">COMMAND PATH</div>
+        <div id="remote-request" class="value">Remote request: waiting</div>
+        <div id="arduino-output" class="value">Arduino output: waiting for telemetry</div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">SYSTEM INDICATORS / FUTURE I/O</div>
+        <div class="indicators">
+          <div class="indicator-name">Remote link</div><div id="remote-link" class="indicator-value">UNLINKED</div>
+          <div class="indicator-name">Robot link</div><div id="robot-link" class="indicator-value">WAITING</div>
+          <div class="indicator-name">Control mode</div><div class="indicator-value">REMOTE HARDWARE</div>
+          <div class="indicator-name">Arduino</div><div id="arduino" class="indicator-value">SEARCHING</div>
+          <div class="indicator-name">Motor drivers</div><div id="motor-drivers" class="indicator-value">WAITING FOR TELEMETRY</div>
+          <div class="indicator-name">Bumpers / safety</div><div id="bumpers" class="indicator-value">WAITING FOR TELEMETRY</div>
+          <div class="indicator-name">LED mode (commanded)</div><div id="led-mode" class="indicator-value">WAITING FOR TELEMETRY</div>
+          <div class="indicator-name">Battery</div><div class="indicator-value">NOT AVAILABLE</div>
+        </div>
+      </div>
+
+      <div class="panel serial-panel">
+        <div class="panel-title">USB SERIAL MONITOR — PI 4 ↔ ARDUINO</div>
+        <pre id="serial-log">Waiting for receiver service...</pre>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span id="packet">No remote packets received</span>
+    <span>Local dashboard · http://devbot.local:8080</span>
+  </footer>
+
+  <script>
+    const colours = {
+      text: "#e5edf8", muted: "#8fa3bd", grid: "#43526a", blue: "#37a2ff",
+      green: "#39d98a", red: "#ff5d73", amber: "#ffbd4a", cyan: "#35d0d0",
+      purple: "#a875ff", magenta: "#ff58b0", orange: "#ff8a3d"
+    };
+
+    const ledStates = {
+      BOOT: ["BOOT / PURPLE", colours.purple],
+      DISABLED: ["DISABLED / BLUE", colours.blue],
+      AWAIT_NEUTRAL: ["AWAIT NEUTRAL / BLUE", colours.blue],
+      READY: ["READY / CYAN", colours.cyan],
+      DRIVING_FORWARD: ["FORWARD / GREEN", colours.green],
+      DRIVING_REVERSE: ["REVERSE / RED", colours.red],
+      TURNING_LEFT: ["TURN LEFT / AMBER", colours.amber],
+      TURNING_RIGHT: ["TURN RIGHT / AMBER", colours.amber],
+      OBSTACLE_STOP: ["OBSTACLE / MAGENTA", colours.magenta],
+      COMMS_LOST: ["COMMS LOST / RED", colours.red],
+      FAULT: ["FAULT / ORANGE", colours.orange]
+    };
+
+    const byId = id => document.getElementById(id);
+    let lastLogId = -1;
+
+    function setValue(id, text, colour = colours.text) {
+      const element = byId(id);
+      element.textContent = text;
+      element.style.color = colour;
+    }
+
+    function drawJoystick(rawX, rawY) {
+      const canvas = byId("joystick");
+      const ctx = canvas.getContext("2d");
+      const width = canvas.width;
+      const height = canvas.height;
+      const cx = width / 2;
+      const cy = height / 2;
+      const radius = Math.min(width, height) / 2 - 45;
+      ctx.clearRect(0, 0, width, height);
+      ctx.strokeStyle = colours.grid;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(cx - radius, cy - radius, radius * 2, radius * 2);
+      ctx.beginPath();
+      ctx.moveTo(cx - radius, cy); ctx.lineTo(cx + radius, cy);
+      ctx.moveTo(cx, cy - radius); ctx.lineTo(cx, cy + radius);
+      ctx.stroke();
+      ctx.fillStyle = colours.muted;
+      ctx.font = "13px DejaVu Sans, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("FWD", cx, cy - radius - 15);
+      ctx.fillText("REV", cx, cy + radius + 25);
+      ctx.fillText("L", cx - radius - 22, cy + 5);
+      ctx.fillText("R", cx + radius + 22, cy + 5);
+      const offsetX = Math.max(-radius, Math.min(radius, (32768 - rawX) * radius / 32768));
+      const offsetY = Math.max(-radius, Math.min(radius, (rawY - 32768) * radius / 32768));
+      ctx.beginPath();
+      ctx.arc(cx + offsetX, cy + offsetY, 11, 0, Math.PI * 2);
+      ctx.fillStyle = colours.blue;
+      ctx.fill();
+      ctx.strokeStyle = "#b9e1ff";
+      ctx.stroke();
+    }
+
+    function updateRemote(remote) {
+      const linkedColour = remote.linked ? colours.green : colours.red;
+      const linkedText = remote.linked ? "LINKED" : "UNLINKED";
+      byId("link-badge").textContent = linkedText;
+      byId("link-badge").style.background = linkedColour;
+      setValue("remote-link", linkedText, linkedColour);
+      setValue("radio-badge", `RADIO ${remote.radio_state}`,
+        remote.radio_state === "READY" ? colours.green :
+        remote.radio_state === "ERROR" ? colours.red : colours.amber);
+      byId("direction").textContent = remote.direction;
+      byId("remote-request").textContent = `Remote request: ${remote.direction}`;
+      drawJoystick(remote.raw_x, remote.raw_y);
+      byId("packet").textContent = remote.packet_received
+        ? `Packet ${String(remote.sequence).padStart(4, "0")} · RSSI ${remote.rssi} dBm · Age ${remote.age_ms} ms · Group 73 · Radio 1 → 2`
+        : "No remote packets received";
+    }
+
+    function updateArduino(arduino) {
+      setValue("robot-link", arduino.linked ? "SERIAL LINKED" : "WAITING",
+        arduino.linked ? colours.green : colours.amber);
+      const identity = arduino.device
+        ? `${arduino.device} / ${arduino.capability}`
+        : arduino.serial_state;
+      setValue("arduino", arduino.fault_mask ? "FAULT" : identity,
+        arduino.fault_mask ? colours.red : arduino.linked ? colours.green : colours.amber);
+
+      if (!arduino.telemetry_received) {
+        setValue("motor-drivers", "NO TELEMETRY", colours.amber);
+        setValue("bumpers", "NO TELEMETRY", colours.amber);
+        setValue("led-mode", "NO TELEMETRY", colours.amber);
+        return;
+      }
+
+      byId("arduino-output").textContent =
+        `Arduino output: ${arduino.state.padEnd(16)} L ${signed(arduino.applied_left)}  R ${signed(arduino.applied_right)}`;
+
+      const drivers = ["DISABLED", "LEFT ENABLED", "RIGHT ENABLED", "BOTH ENABLED"];
+      setValue("motor-drivers", drivers[arduino.driver_enable_mask],
+        arduino.driver_enable_mask ? colours.green : colours.text);
+
+      const activeBumpers = [];
+      if (arduino.bumper_mask & 1) activeBumpers.push("LEFT");
+      if (arduino.bumper_mask & 2) activeBumpers.push("CENTRE");
+      if (arduino.bumper_mask & 4) activeBumpers.push("RIGHT");
+      if (activeBumpers.length) {
+        setValue("bumpers", `ACTIVE: ${activeBumpers.join(" + ")}`, colours.red);
+      } else if (arduino.state === "OBSTACLE_STOP") {
+        setValue("bumpers", "STOP LATCHED / RELEASED", colours.amber);
+      } else {
+        setValue("bumpers", "RELEASED", colours.green);
+      }
+
+      const led = ledStates[arduino.state] || [arduino.state, colours.text];
+      setValue("led-mode", led[0], led[1]);
+    }
+
+    function signed(value) {
+      return `${value >= 0 ? "+" : ""}${String(value).padStart(4, " ")}`;
+    }
+
+    function updateLogs(logs) {
+      const newest = logs.length ? logs[logs.length - 1].entry_id : 0;
+      if (newest === lastLogId) return;
+      lastLogId = newest;
+      const log = byId("serial-log");
+      log.textContent = logs.map(entry =>
+        `${entry.timestamp}  ${entry.source.padEnd(5)} ${entry.text}`
+      ).join("\n");
+      log.scrollTop = log.scrollHeight;
+    }
+
+    async function refresh() {
+      try {
+        const response = await fetch("/api/status", {cache: "no-store"});
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const status = await response.json();
+        setValue("server-badge", "WEB CONNECTED", colours.green);
+        updateRemote(status.remote);
+        updateArduino(status.arduino);
+        updateLogs(status.logs);
+      } catch (_error) {
+        setValue("server-badge", "WEB OFFLINE", colours.red);
+      }
+    }
+
+    drawJoystick(32768, 32768);
+    refresh();
+    setInterval(refresh, 150);
+  </script>
+</body>
+</html>

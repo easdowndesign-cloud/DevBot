@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=DevBot Receiver
+Comment=Open the DevBot remote and robot-status dashboard
+Exec=@APP_DIR@/run_dashboard.sh
+Icon=@APP_DIR@/devbot_receiver.svg
+Terminal=false
+Categories=Utility;Development;
+StartupNotify=false

@@ -1,6 +1,7 @@
-#include "input/JoystickInput.h"
+#include "JoystickInput.h"
 
-#include "config/HardwareConfig.h"
+#include "../config/HardwareConfig.h"
+#include "../core/DifferentialMixer.h"
 
 void JoystickInput::begin() {
   // Activation outputs are driven analogue voltages, so no pull-ups are used.
@@ -23,17 +24,7 @@ JoystickSnapshot JoystickInput::read() {
 }
 
 DriveCommand JoystickInput::mix(const JoystickSnapshot& input) const {
-  // Arcade mixing: Y is throttle and X is steering. Renormalize at the corners.
-  long left = static_cast<long>(input.y) + input.x;
-  long right = static_cast<long>(input.y) - input.x;
-  const long peak = max(abs(left), abs(right));
-  // Diagonal joystick positions can exceed +/-1000 after addition/subtraction.
-  // Scale both sides equally to preserve their steering ratio.
-  if (peak > config::kDriveScale) {
-    left = left * config::kDriveScale / peak;
-    right = right * config::kDriveScale / peak;
-  }
-  return {static_cast<int16_t>(left), static_cast<int16_t>(right)};
+  return mixDifferential(input.x, input.y);
 }
 
 int16_t JoystickInput::normalizeAxis(int raw, int centre, bool inverted) const {

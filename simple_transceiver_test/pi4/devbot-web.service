@@ -1,0 +1,16 @@
+[Unit]
+Description=DevBot headless web receiver
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=@APP_USER@
+Group=@APP_USER@
+WorkingDirectory=@APP_DIR@
+ExecStart=@APP_DIR@/run_web_dashboard.sh
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

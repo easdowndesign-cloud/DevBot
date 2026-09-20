@@ -1,5 +1,10 @@
+// Legacy PlatformIO entry point retained only for repository history. The
+// canonical application now lives in arduino.ino for direct Arduino IDE use.
+#if 0
+
 #include <Arduino.h>
 
+#include "app/SerialBenchApplication.h"
 #include "config/HardwareConfig.h"
 #include "core/Types.h"
 #include "drive/DRI0023Drive.h"
@@ -10,6 +15,7 @@
 // Step 0 application coordinator. Hardware-specific work is delegated to the
 // input, drive, and LED adapters so this file can focus on safety and state flow.
 namespace {
+SerialBenchApplication serialBench;
 DRI0023Drive drive;     // Converts logical wheel commands into shield pulses.
 JoystickInput joystick; // Provides normalized position and dead-man state.
 BumperInput bumpers;    // Latches obstacle events and debounces live switches.
@@ -37,12 +43,14 @@ const __FlashStringHelper* stateName(AppState value) {
   switch (value) {
     case AppState::Boot: return F("BOOT");
     case AppState::Disabled: return F("DISABLED");
+    case AppState::AwaitNeutral: return F("AWAIT_NEUTRAL");
     case AppState::Ready: return F("READY");
     case AppState::DrivingForward: return F("DRIVING_FORWARD");
     case AppState::DrivingReverse: return F("DRIVING_REVERSE");
     case AppState::TurningLeft: return F("TURNING_LEFT");
     case AppState::TurningRight: return F("TURNING_RIGHT");
     case AppState::ObstacleStop: return F("OBSTACLE_STOP");
+    case AppState::CommsLost: return F("COMMS_LOST");
     case AppState::Fault: return F("FAULT");
   }
   return F("UNKNOWN");
@@ -173,6 +181,10 @@ AppState drivingStateFor(const DriveCommand& command) {
 // channels before the success animation is allowed to run.
 void setup() {
   Serial.begin(config::kSerialBaud);
+  if (config::kSerialControlEnabled) {
+    serialBench.begin();
+    return;
+  }
   joystick.begin();
   leds.begin();
   const bool bumpersReady = bumpers.begin();
@@ -192,6 +204,10 @@ void setup() {
 // Cooperative real-time loop: pulse generation runs continuously while slower
 // input, state, LED, and serial work executes at the configured control rate.
 void loop() {
+  if (config::kSerialControlEnabled) {
+    serialBench.update();
+    return;
+  }
   // AccelStepper is cooperative: service both STEP channels on every pass.
   drive.service();
 
@@ -235,6 +251,13 @@ void loop() {
       if (joystickActive) {
         enterState(AppState::Ready);
       }
+      break;
+
+    case AppState::AwaitNeutral:
+    case AppState::CommsLost:
+      // These states are owned by SerialBenchApplication in serial-control mode.
+      drive.stop();
+      appliedCommand = {};
       break;
 
     case AppState::Ready:
@@ -281,3 +304,5 @@ void loop() {
   leds.showState(state, appliedCommand);
   printBenchTelemetry(joystickInput, requestedCommand, bumpers.pressedMask());
 }
+
+#endif

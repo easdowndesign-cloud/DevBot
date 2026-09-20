@@ -1,6 +1,6 @@
-#include "output/LedController.h"
+#include "LedController.h"
 
-#include "config/HardwareConfig.h"
+#include "../config/HardwareConfig.h"
 
 // NEO_GRB + NEO_KHZ800 matches the installed WS2812-compatible LED chain.
 LedController::LedController()
@@ -93,7 +93,10 @@ LedController::StatusColour LedController::motorStatusColour(int16_t speed, AppS
   // Safety/application states take priority over the requested wheel direction.
   if (state == AppState::Fault) return StatusColour::Orange;
   if (state == AppState::ObstacleStop) return StatusColour::Magenta;
-  if (state == AppState::Disabled || state == AppState::Boot) return StatusColour::Blue;
+  if (state == AppState::Disabled || state == AppState::Boot ||
+      state == AppState::AwaitNeutral || state == AppState::CommsLost) {
+    return StatusColour::Blue;
+  }
   if (speed > config::kDriveMotionThreshold) return StatusColour::Green;
   if (speed < -config::kDriveMotionThreshold) return StatusColour::Red;
   return StatusColour::Amber;
@@ -104,12 +107,14 @@ LedController::StatusColour LedController::modeStatusColour(AppState state) {
   switch (state) {
     case AppState::Boot: return StatusColour::Purple;
     case AppState::Disabled: return StatusColour::Blue;
+    case AppState::AwaitNeutral: return StatusColour::Blue;
     case AppState::Ready: return StatusColour::Cyan;
     case AppState::DrivingForward: return StatusColour::Green;
     case AppState::DrivingReverse: return StatusColour::Red;
     case AppState::TurningLeft: return StatusColour::Amber;
     case AppState::TurningRight: return StatusColour::Amber;
     case AppState::ObstacleStop: return StatusColour::Magenta;
+    case AppState::CommsLost: return StatusColour::Red;
     case AppState::Fault: return StatusColour::Orange;
   }
   return StatusColour::Off;

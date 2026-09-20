@@ -1,9 +1,9 @@
-#include "input/BumperInput.h"
+#include "BumperInput.h"
 
 #include <Arduino.h>
 #include <PinChangeInterrupt.h>
 
-#include "config/HardwareConfig.h"
+#include "../config/HardwareConfig.h"
 
 // Interrupt handlers OR bits into this shared byte until loop() consumes them.
 volatile uint8_t BumperInput::interruptMask_ = 0;
